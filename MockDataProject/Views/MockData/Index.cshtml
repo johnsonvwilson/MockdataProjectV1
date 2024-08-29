@@ -1,0 +1,165 @@
+﻿@model IEnumerable<MockDataProject.Models.MockData>
+
+@{
+    ViewBag.Title = "MockData List";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="text-center">@ViewBag.Title</h2>
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4>MockData Entries</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Form to create new MockData -->
+                    <form id="createMockDataForm" class="mb-4">
+                        @Html.AntiForgeryToken() <!-- Include Anti-Forgery Token -->
+                        <div class="form-group row">
+                            <label for="FirstName" class="col-sm-2 col-form-label">First Name</label>
+                            <div class="col-sm-4">
+                                <input type="text" id="FirstName" name="FirstName" class="form-control" placeholder="First Name" required />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="LastName" class="col-sm-2 col-form-label">Last Name</label>
+                            <div class="col-sm-4">
+                                <input type="text" id="LastName" name="LastName" class="form-control" placeholder="Last Name" required />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="Email" class="col-sm-2 col-form-label">Email</label>
+                            <div class="col-sm-4">
+                                <input type="email" id="Email" name="Email" class="form-control" placeholder="Email" required />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-sm-2"></div> <!-- This empty column is for alignment purposes -->
+                            <div class="col-sm-4">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fa fa-plus"></i> Create New
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    @if (Model.Any())
+                    {
+                        <table class="table table-striped table-hover">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>First Name</th>
+                                    <th>Last Name</th>
+                                    <th>Email</th>
+                                    <th class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mockDataTable">
+                                @foreach (var item in Model)
+                                {
+                                    <tr id="row-@item.Id">
+                                        <td>@Html.DisplayFor(modelItem => item.FirstName)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.LastName)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.Email)</td>
+                                        <td class="text-right">
+                                            <a href="@Url.Action("Edit", "MockData", new { id = item.Id })" class="btn btn-warning btn-sm edit-mockdata">
+                                                <i class="fa fa-edit"></i> Edit
+                                            </a>
+                                            <button type="button" class="btn btn-danger btn-sm delete-mockdata" data-id="@item.Id">
+                                                <i class="fa fa-trash"></i> Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info text-center" role="alert">
+                            No MockData entries found. Use the form above to add a new entry.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ensure FontAwesome is included for icons -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" />
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+   $(document).ready(function() {
+    // Handle form submission via AJAX
+    $('#createMockDataForm').on('submit', function(event) {
+        event.preventDefault();
+
+        var form = $(this);
+        var formData = form.serialize(); // Serialize form data
+
+        $.ajax({
+            url: '@Url.Action("Create", "MockData")',
+            type: 'POST',
+            data: formData,
+            success: function(response) {
+                if (response && response.success) {
+                    // Construct the new row HTML
+                    var newRow = `
+                        <tr id="row-${response.data.Id}">
+                            <td>${response.data.FirstName}</td>
+                            <td>${response.data.LastName}</td>
+                            <td>${response.data.Email}</td>
+                            <td class="text-right">
+                                <a href="@Url.Action("Edit", "MockData")/${response.data.Id}" class="btn btn-warning btn-sm edit-mockdata">
+                                    <i class="fa fa-edit"></i> Edit
+                                </a>
+                                <button type="button" class="btn btn-danger btn-sm delete-mockdata" data-id="${response.data.Id}">
+                                    <i class="fa fa-trash"></i> Delete
+                                </button>
+                            </td>
+                        </tr>`;
+
+                    $('#mockDataTable').append(newRow);
+                    form[0].reset(); // Clear the form fields
+                } else {
+                    alert('Failed to create the entry.');
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('An error occurred: ' + error);
+            }
+        });
+    });
+
+
+        $(document).on('click', '.delete-mockdata', function() {
+        var id = $(this).data('id');
+        var row = $('#row-' + id);
+
+        if (confirm('Are you sure you want to delete this entry?')) {
+            $.ajax({
+                url: '@Url.Action("Delete", "MockData")/' + id,
+                type: 'POST',
+                data: {
+                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() // Include Anti-Forgery Token
+                },
+                success: function(response) {
+                    if (response.success) {
+                        row.remove(); // Remove the row from the table
+                    } else {
+                        alert('Failed to delete the entry.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('An error occurred: ' + error);
+                }
+            });
+        }
+    });
+    });
+</script>
